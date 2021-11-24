@@ -24,7 +24,7 @@ routes_fields.append(QgsField('Route id',QVariant.Int))
 order_fields = QgsFields()
 order_fields.append(QgsField('Route id',QVariant.Int))
 order_fields.append(QgsField('Order',QVariant.String))
-order_fields.append(QgsField('Stop id',QVariant.Int))
+
 
 est_fields = QgsFields()
 est_fields.append(QgsField('Stop id',QVariant.Int))
@@ -129,15 +129,19 @@ class SBRProcessing(QgsProcessingAlgorithm):
                                                     QgsWkbTypes.LineString,
                                                     context.project().crs())
 
+            stop_field = stop.fields()
+            stop_field.extend(order_fields)
             (sink_route, idOutput_route) = self.parameterAsSink(parameters,
                                                                 self.ROUTPUT, context,
-                                                                order_fields,
+                                                                stop_field,
                                                                 QgsWkbTypes.Point,
                                                                 context.project().crs())
 
+            est_field = students.fields()
+            est_field.extend(est_fields)
             (sink_est, idOutput_est) = self.parameterAsSink(parameters,
                                                             self.ESTOUTPUT, context,
-                                                            est_fields,
+                                                            est_field,
                                                             QgsWkbTypes.Point,
                                                             context.project().crs())
 
@@ -151,7 +155,9 @@ class SBRProcessing(QgsProcessingAlgorithm):
 
                     f = QgsFeature()
                     f.setGeometry(QgsGeometry.fromWkt(o.geometry().asWkt()))
-                    f.setAttributes([index,ind,o.id()])
+                    o_attr = o.attributes()
+                    o_attr.extend([index,ind])
+                    f.setAttributes(o_attr)
 
                     sink_route.addFeature(f,QgsFeatureSink.FastInsert)
                     polyline.append(f.geometry().asPoint())
@@ -161,10 +167,13 @@ class SBRProcessing(QgsProcessingAlgorithm):
                 f.setAttributes([index])
                 sink.addFeature(f, QgsFeatureSink.FastInsert)
 
-            for student_index in student:
+         
+            for index,stop_index in enumerate(student):
                 feat = QgsFeature()
-                feat.setGeometry(QgsGeometry.fromWkt(studentsList[student_index].geometry().asWkt()))
-                feat.setAttributes([stopList[student_index].id()])
+                feat.setGeometry(QgsGeometry.fromWkt(studentsList[index].geometry().asWkt()))
+                est_attr = studentsList[index].attributes()
+                est_attr.extend([stopList[stop_index].id()])
+                feat.setAttributes(est_attr)
                 
                 sink_est.addFeature(feat,QgsFeatureSink.FastInsert)
 
